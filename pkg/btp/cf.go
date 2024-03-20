@@ -104,6 +104,12 @@ func applyCallbacks(r *resty.Request, callbacks ...func(r *resty.Request)) {
 	}
 }
 
+func WithCallbacks(callbacks ...func(r *resty.Request)) func(r *resty.Request) {
+	return func(r *resty.Request) {
+		applyCallbacks(r, callbacks...)
+	}
+}
+
 // CFError is a struct that represents an error response from the server
 type CFError struct {
 	Detail string `json:"detail"`
@@ -180,25 +186,35 @@ type PaginatedResponse[T any] struct {
 	Resources []T
 }
 
+// ExecuteResult is a wrapper around Execute which automatically sets the result type
+// :param req: The requester to use
+// :param method: The HTTP method to use
+// :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
+// :param callback: One or more optional callbacks that will be called with the request object before it is executed
+// :return: The response from the server, parsed as the given type
+func ExecuteResult[T any](req *Requester, method string, path any, callback ...func(r *resty.Request)) (*T, error) {
+	resp, err := req.Execute(method, path, WithResult[T](), WithCallbacks(callback...))
+	if err != nil {
+		return nil, err
+	}
+	return resp.Result().(*T), nil
+}
+
 // ExecutePaginated is a wrapper around Execute which automatically fetches all pages of a paginated response
 // :param req: The requester to use
 // :param method: The HTTP method to use
 // :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
 // :param callback: One or more optional callbacks that will be called with the request object before it is executed
 // :return: The resources from all pages
-func ExecutePaginated[T any](req *Requester, method string, path any /* maxPages int, */, callback ...func(r *resty.Request)) ([]T, error) {
+func ExecutePaginated[T any](req *Requester, method string, path any, callback ...func(r *resty.Request)) ([]T, error) {
 	var result []T
 
 	currentPath := path
 	for i := 0; i < MaxPages; i++ {
-		resp, err := req.Execute(method, currentPath, func(r *resty.Request) {
-			r.SetResult(&PaginatedResponse[T]{})
-			applyCallbacks(r, callback...)
-		})
+		paginated, err := ExecuteResult[PaginatedResponse[T]](req, method, currentPath, callback...)
 		if err != nil {
 			return nil, err
 		}
-		paginated := resp.Result().(*PaginatedResponse[T])
 		result = append(result, paginated.Resources...)
 
 		if paginated.Pagination.Next != nil {
@@ -227,6 +243,14 @@ func GetPaginated[T any](req *Requester, path string, callback ...func(r *resty.
 	return ExecutePaginated[T](req, resty.MethodGet, path, callback...)
 }
 
+// GetResult is a wrapper around ExecuteResult which automatically sets the method to GET
+// :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
+// :param callback: One or more optional callbacks that will be called with the request object before it is executed
+// :return: The response from the server, parsed as the given type
+func GetResult[T any](req *Requester, path string, callback ...func(r *resty.Request)) (*T, error) {
+	return ExecuteResult[T](req, resty.MethodGet, path, callback...)
+}
+
 // Post is a wrapper around Execute which automatically sets the method to POST
 // :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
 // :param callback: One or more optional callbacks that will be called with the request object before it is executed
@@ -235,12 +259,40 @@ func (req *Requester) Post(path string, callback ...func(r *resty.Request)) (*re
 	return req.Execute(resty.MethodPost, path, callback...)
 }
 
+// PostResult is a wrapper around ExecuteResult which automatically sets the method to Post
+// :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
+// :param callback: One or more optional callbacks that will be called with the request object before it is executed
+// :return: The response from the server, parsed as the given type
+func PostResult[T any](req *Requester, path string, callback ...func(r *resty.Request)) (*T, error) {
+	return ExecuteResult[T](req, resty.MethodPost, path, callback...)
+}
+
+// PatchResult is a wrapper around ExecuteResult which automatically sets the method to Patch
+// :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
+// :param callback: One or more optional callbacks that will be called with the request object before it is executed
+// :return: The response from the server, parsed as the given type
+func PatchResult[T any](req *Requester, path string, callback ...func(r *resty.Request)) (*T, error) {
+	return ExecuteResult[T](req, resty.MethodPatch, path, callback...)
+}
+
 // WithQueryParams is a callback that sets the query parameters for a request
 func WithQueryParams(params map[string]string) func(r *resty.Request) {
 	return func(r *resty.Request) {
 		for key, value := range params {
 			r.SetQueryParam(key, value)
 		}
+	}
+}
+
+func WithBody(body any) func(r *resty.Request) {
+	return func(r *resty.Request) {
+		r.SetBody(body)
+	}
+}
+
+func WithResult[T any]() func(r *resty.Request) {
+	return func(r *resty.Request) {
+		r.SetResult(new(T))
 	}
 }
 
