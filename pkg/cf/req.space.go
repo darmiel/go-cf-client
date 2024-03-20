@@ -1,8 +1,6 @@
-package btp
+package cf
 
-import (
-	"btp-service/pkg/models"
-)
+import "github.com/darmiel/go-cf-client/pkg/models"
 
 // ListSpacesOptions are the options for listing spaces
 type ListSpacesOptions struct {

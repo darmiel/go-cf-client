@@ -1,4 +1,4 @@
-module btp-service
+module github.com/darmiel/go-cf-client
 
 go 1.22.1
 

@@ -1,9 +1,9 @@
-package btp
+package cf
 
 import (
-	"btp-service/internal/util"
 	"encoding/json"
 	"fmt"
+	"github.com/darmiel/go-cf-client/internal/util"
 	"github.com/go-resty/resty/v2"
 	"os"
 	"strconv"

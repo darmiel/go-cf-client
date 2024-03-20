@@ -1,7 +1,7 @@
-package btp
+package cf
 
 import (
-	"btp-service/pkg/models"
+	"github.com/darmiel/go-cf-client/pkg/models"
 	"strings"
 )
 
