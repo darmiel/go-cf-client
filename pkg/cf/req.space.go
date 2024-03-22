@@ -1,6 +1,9 @@
 package cf
 
-import "github.com/darmiel/go-cf-client/pkg/models"
+import (
+	"github.com/darmiel/go-cf-client/internal/util"
+	"github.com/darmiel/go-cf-client/pkg/models"
+)
 
 // ListSpacesOptions are the options for listing spaces
 type ListSpacesOptions struct {
@@ -68,19 +71,16 @@ func (req *CloudFoundryClient) UpdateSpace(guid string, options UpdateSpaceOptio
 type CreateSpaceOptions struct {
 	// Labels is a map of labels to assign to the space
 	Labels map[string]string
+
 	// Annotations is a map of annotations to assign to the space
 	Annotations map[string]string
 }
 
 func (req *CloudFoundryClient) CreateSpace(name, orgGUID string, options CreateSpaceOptions) (*models.Space, error) {
-	body := map[string]any{
+	body := util.KV{
 		"name": name,
-		"relationships": map[string]any{
-			"organization": map[string]any{
-				"data": map[string]string{
-					"guid": orgGUID,
-				},
-			},
+		"relationships": util.KV{
+			"organization": util.DataGUID(orgGUID),
 		},
 	}
 	if options.Labels != nil {
