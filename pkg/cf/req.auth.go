@@ -6,58 +6,57 @@ import (
 	"time"
 )
 
-// makeAuthRequest is a helper function to make an authentication request.
+// makeAuthenticationRequest is a helper function to make an authentication request.
 // it fills some default parameters for authentication requests.
-func (c *Config) makeAuthRequest(params map[string]string) (*resty.Response, error) {
+func (cfg *CloudFoundryConfig) makeAuthenticationRequest(authParams map[string]string) (*resty.Response, error) {
 	return resty.New().R().
 		EnableTrace().
-		SetQueryParams(params).
-		SetBasicAuth(c.OAuthClientID, c.OAuthClientSecret).
-		SetResult(new(TokenResponse)).
-		Post(fmt.Sprintf("%s/oauth/token", c.AuthEndpoint))
+		SetQueryParams(authParams).
+		SetBasicAuth(cfg.OAuthClientID, cfg.OAuthClientSecret).
+		SetResult(new(AuthTokenInfo)).
+		Post(fmt.Sprintf("%s/oauth/token", cfg.AuthEndpoint))
 }
 
-// GetRequester returns a new requester which manages the token and refreshes it if necessary
-func (c *Config) GetRequester() (*Requester, error) {
-	resp, err := c.makeAuthRequest(map[string]string{
+// NewClient returns a new request httpClient which manages the authToken and refreshes it if necessary
+func (cfg *CloudFoundryConfig) NewClient() (*CloudFoundryClient, error) {
+	resp, err := cfg.makeAuthenticationRequest(map[string]string{
 		"grant_type": "password",
 		"scope":      "",
-		"username":   c.Username,
-		"password":   c.Password,
+		"username":   cfg.Username,
+		"password":   cfg.Password,
 	})
-
 	if err != nil {
 		return nil, err
 	}
 
-	token := resp.Result().(*TokenResponse)
-	fmt.Println("Got token:", token.AccessToken)
-	return &Requester{
-		token:  token,
-		time:   time.Now(),
-		config: c,
+	token := resp.Result().(*AuthTokenInfo)
+	return &CloudFoundryClient{
+		authToken:    token,
+		lastAuthTime: time.Now(),
+		config:       cfg,
+		httpClient:   resty.New(),
 	}, nil
 }
 
-// IsExpired returns true if the token is expired
-func (req *Requester) IsExpired() bool {
-	return req.time.
-		Add(time.Duration(req.token.ExpiresIn)*time.Second - TokenTimeJitter).
+// TokenIsExpired returns true if the authToken is expired
+func (req *CloudFoundryClient) TokenIsExpired() bool {
+	return req.lastAuthTime.
+		Add(time.Duration(req.authToken.ExpiresIn)*time.Second - TokenExpirySafetyMargin).
 		Before(time.Now())
 }
 
-// Refresh tries to refresh the token
-func (req *Requester) Refresh() error {
-	resp, err := req.config.makeAuthRequest(map[string]string{
+// RefreshToken tries to refresh the authToken
+func (req *CloudFoundryClient) RefreshToken() error {
+	resp, err := req.config.makeAuthenticationRequest(map[string]string{
 		"grant_type":    "refresh_token",
-		"refresh_token": req.token.RefreshToken,
+		"refresh_token": req.authToken.RefreshToken,
 	})
 	if err != nil {
 		return err
 	}
 
-	// update the token and time from the response
-	req.token = resp.Result().(*TokenResponse)
-	req.time = time.Now()
+	// Update the authentication token and timestamp based on the response
+	req.authToken = resp.Result().(*AuthTokenInfo)
+	req.lastAuthTime = time.Now()
 	return nil
 }

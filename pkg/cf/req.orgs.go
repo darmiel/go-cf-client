@@ -5,24 +5,27 @@ import (
 	"strings"
 )
 
+// ListOrganizationsOptions specifies criteria for fetching organizations,
+// including pagination and optional filtering by names or GUIDs.
 type ListOrganizationsOptions struct {
-	PerPageOptions
+	PaginationOptions
 
-	// Names is a list of organization names to filter by
-	Names []string
+	// NameFilters is an optional list of organization names to filter by
+	NameFilters []string
 
-	// GUIDs is a list of organization GUIDs to filter by
-	GUIDs []string
+	// GUIDFilters is an optional list of organization GUIDFilters to filter by
+	GUIDFilters []string
 }
 
-// ListOrganizations returns a list of organizations
-func (req *Requester) ListOrganizations(options ListOrganizationsOptions) ([]models.Organization, error) {
-	params := createParams(options.PerPageOptions)
-	if options.Names != nil {
-		params["names"] = strings.Join(options.Names, ",")
+// ListOrganizations fetches a list of organizations based on the provided fetch options,
+// which include pagination and filters by names and GUIDs.
+func (req *CloudFoundryClient) ListOrganizations(options ListOrganizationsOptions) ([]models.Organization, error) {
+	queryParams := createParams(options.PaginationOptions)
+	if options.NameFilters != nil {
+		queryParams["names"] = strings.Join(options.NameFilters, ",")
 	}
-	if options.GUIDs != nil {
-		params["guids"] = strings.Join(options.GUIDs, ",")
+	if options.GUIDFilters != nil {
+		queryParams["guids"] = strings.Join(options.GUIDFilters, ",")
 	}
-	return GetPaginated[models.Organization](req, "/v3/organizations", WithQueryParams(params))
+	return GetPaginated[models.Organization](req, "/v3/organizations", WithQueryParams(queryParams))
 }

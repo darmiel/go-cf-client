@@ -4,7 +4,7 @@ import "github.com/darmiel/go-cf-client/pkg/models"
 
 // ListSpacesOptions are the options for listing spaces
 type ListSpacesOptions struct {
-	PerPageOptions
+	PaginationOptions
 
 	// Names is a list of space names to filter by
 	Names []string
@@ -20,13 +20,13 @@ type ListSpacesOptions struct {
 }
 
 // ListSpaces returns a list of spaces the user has access to
-func (req *Requester) ListSpaces(options ListSpacesOptions) ([]models.Space, error) {
-	params := createParams(options.PerPageOptions)
+func (req *CloudFoundryClient) ListSpaces(options ListSpacesOptions) ([]models.Space, error) {
+	params := createParams(options.PaginationOptions)
 	return GetPaginated[models.Space](req, "/v3/spaces", WithQueryParams(params))
 }
 
 // GetSpace returns a space by GUID
-func (req *Requester) GetSpace(guid string) (*models.Space, error) {
+func (req *CloudFoundryClient) GetSpace(guid string) (*models.Space, error) {
 	return GetResult[models.Space](req, "/v3/spaces/"+guid)
 }
 
@@ -34,15 +34,17 @@ func (req *Requester) GetSpace(guid string) (*models.Space, error) {
 type UpdateSpaceOptions struct {
 	// Name is the new name of the space
 	Name string
+
 	// Labels is a map of labels to assign to the space
 	Labels map[string]string
+
 	// Annotations is a map of annotations to assign to the space
 	Annotations map[string]string
 }
 
 // UpdateSpace updates a space by GUID
 // You can update the name, labels, and annotations
-func (req *Requester) UpdateSpace(guid string, options UpdateSpaceOptions) (*models.Space, error) {
+func (req *CloudFoundryClient) UpdateSpace(guid string, options UpdateSpaceOptions) (*models.Space, error) {
 	body := map[string]any{}
 	if options.Name != "" {
 		body["name"] = options.Name
@@ -70,7 +72,7 @@ type CreateSpaceOptions struct {
 	Annotations map[string]string
 }
 
-func (req *Requester) CreateSpace(name, orgGUID string, options CreateSpaceOptions) (*models.Space, error) {
+func (req *CloudFoundryClient) CreateSpace(name, orgGUID string, options CreateSpaceOptions) (*models.Space, error) {
 	body := map[string]any{
 		"name": name,
 		"relationships": map[string]any{
