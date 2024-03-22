@@ -183,7 +183,7 @@ func WithResult[T any]() RequestModifier {
 // SendRequest is a wrapper around newAuthenticatedRequest which automatically sets the endpoint
 // :param method: The HTTP method to use
 // :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
-// :param callback: One or more optional callbacks that will be called with the request object before it is executed
+// :param modifier: One or more optional modifiers that will be called with the request object before it is executed
 // :return: The response from the server
 func (req *CloudFoundryClient) SendRequest(
 	method string,
@@ -210,7 +210,7 @@ func (req *CloudFoundryClient) SendRequest(
 // :param req: The requester to use
 // :param method: The HTTP method to use
 // :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
-// :param callback: One or more optional callbacks that will be called with the request object before it is executed
+// :param modifier: One or more optional modifiers that will be called with the request object before it is executed
 // :return: The response from the server, parsed as the given type
 func SendRequestAndParseResult[T any](
 	req *CloudFoundryClient,
@@ -229,7 +229,7 @@ func SendRequestAndParseResult[T any](
 // :param req: The requester to use
 // :param method: The HTTP method to use
 // :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
-// :param callback: One or more optional callbacks that will be called with the request object before it is executed
+// :param modifier: One or more optional modifiers that will be called with the request object before it is executed
 // :return: The resources from all pages
 func FetchAllPages[T any](
 	req *CloudFoundryClient,
@@ -261,7 +261,7 @@ func FetchAllPages[T any](
 
 // Get is a wrapper around SendRequest which automatically sets the method to GET
 // :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
-// :param callback: One or more optional callbacks that will be called with the request object before it is executed
+// :param modifiers: One or more optional modifiers that will be called with the request object before it is executed
 // :return: The response from the server
 func (req *CloudFoundryClient) Get(path string, modifiers ...RequestModifier) (*resty.Response, error) {
 	return req.SendRequest(resty.MethodGet, path, modifiers...)
@@ -269,7 +269,7 @@ func (req *CloudFoundryClient) Get(path string, modifiers ...RequestModifier) (*
 
 // GetPaginated is a wrapper around FetchAllPages which automatically sets the method to GET
 // :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
-// :param callback: One or more optional callbacks that will be called with the request object before it is executed
+// :param modifiers: One or more optional modifiers that will be called with the request object before it is executed
 // :return: The resources from all pages
 func GetPaginated[T any](req *CloudFoundryClient, path string, modifiers ...RequestModifier) ([]T, error) {
 	return FetchAllPages[T](req, resty.MethodGet, path, modifiers...)
@@ -277,7 +277,7 @@ func GetPaginated[T any](req *CloudFoundryClient, path string, modifiers ...Requ
 
 // GetResult is a wrapper around SendRequestAndParseResult which automatically sets the method to GET
 // :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
-// :param callback: One or more optional callbacks that will be called with the request object before it is executed
+// :param modifiers: One or more optional modifiers that will be called with the request object before it is executed
 // :return: The response from the server, parsed as the given type
 func GetResult[T any](req *CloudFoundryClient, path string, modifiers ...RequestModifier) (*T, error) {
 	return SendRequestAndParseResult[T](req, resty.MethodGet, path, modifiers...)
@@ -285,7 +285,7 @@ func GetResult[T any](req *CloudFoundryClient, path string, modifiers ...Request
 
 // Post is a wrapper around SendRequest which automatically sets the method to POST
 // :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
-// :param callback: One or more optional callbacks that will be called with the request object before it is executed
+// :param modifiers: One or more optional modifiers that will be called with the request object before it is executed
 // :return: The response from the server
 func (req *CloudFoundryClient) Post(path string, modifiers ...RequestModifier) (*resty.Response, error) {
 	return req.SendRequest(resty.MethodPost, path, modifiers...)
@@ -293,7 +293,7 @@ func (req *CloudFoundryClient) Post(path string, modifiers ...RequestModifier) (
 
 // PostResult is a wrapper around SendRequestAndParseResult which automatically sets the method to Post
 // :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
-// :param callback: One or more optional callbacks that will be called with the request object before it is executed
+// :param modifiers: One or more optional modifiers that will be called with the request object before it is executed
 // :return: The response from the server, parsed as the given type
 func PostResult[T any](req *CloudFoundryClient, path string, modifiers ...RequestModifier) (*T, error) {
 	return SendRequestAndParseResult[T](req, resty.MethodPost, path, modifiers...)
@@ -301,13 +301,28 @@ func PostResult[T any](req *CloudFoundryClient, path string, modifiers ...Reques
 
 // PatchResult is a wrapper around SendRequestAndParseResult which automatically sets the method to Patch
 // :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
-// :param callback: One or more optional callbacks that will be called with the request object before it is executed
+// :param modifiers: One or more optional modifiers that will be called with the request object before it is executed
 // :return: The response from the server, parsed as the given type
 func PatchResult[T any](req *CloudFoundryClient, path string, modifiers ...RequestModifier) (*T, error) {
 	return SendRequestAndParseResult[T](req, resty.MethodPatch, path, modifiers...)
 }
 
-// applyRequestModifiers applies the given callbacks to the request
+// DeleteAndExpectStatus is a wrapper around SendRequestAndParseResult which automatically sets the method to Delete
+// :param path: The path to the endpoint. This can be a string, AbsolutePath or RelativePath
+// :param modifiers: One or more optional modifiers that will be called with the request object before it is executed
+// :return: The response from the server, parsed as the given type
+func (req *CloudFoundryClient) DeleteAndExpectStatus(path string, expectedStatus int, modifiers ...RequestModifier) error {
+	resp, err := req.SendRequest(resty.MethodDelete, path, modifiers...)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode() != expectedStatus {
+		return fmt.Errorf("expected %d, got %d", expectedStatus, resp.StatusCode())
+	}
+	return nil
+}
+
+// applyRequestModifiers applies the given modifiers to the request
 func applyRequestModifiers(r *resty.Request, modifiers ...RequestModifier) {
 	for _, c := range modifiers {
 		c(r)

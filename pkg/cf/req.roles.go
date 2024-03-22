@@ -90,12 +90,12 @@ func (req *CloudFoundryClient) CreateRole(
 		"relationships": relationships,
 	}
 	fmt.Println("payload:", data)
-	return SendRequestAndParseResult[models.Role](req, "POST", "/v3/roles", WithBody(data))
+	return PostResult[models.Role](req, "/v3/roles", WithBody(data))
 }
 
 // GetRole fetches a role by GUID
 func (req *CloudFoundryClient) GetRole(roleGUID string) (*models.Role, error) {
-	return SendRequestAndParseResult[models.Role](req, "GET", "/v3/roles/"+roleGUID)
+	return GetResult[models.Role](req, "/v3/roles/"+roleGUID)
 }
 
 // ListRoleOptions specifies criteria for fetching roles,
@@ -103,19 +103,19 @@ func (req *CloudFoundryClient) GetRole(roleGUID string) (*models.Role, error) {
 type ListRoleOptions struct {
 	PaginationOptions
 
-	// RoleGUIDFilters is an optional list of role GUIDs to filter by
+	// RoleGUIDFilters is an optional list of role GUIDFilters to filter by
 	RoleGUIDFilters []string
 
 	// RoleTypeFilters is an optional list of role types to filter by
 	RoleTypeFilters []string
 
-	// SpaceGUIDFilters is an optional list of space GUIDs to filter by
+	// SpaceGUIDFilters is an optional list of space GUIDFilters to filter by
 	SpaceGUIDFilters []string
 
-	// OrganizationGUIDFilters is an optional list of organization GUIDs to filter by
+	// OrganizationGUIDFilters is an optional list of organization GUIDFilters to filter by
 	OrganizationGUIDFilters []string
 
-	// UserGUIDFilters is an optional list of user GUIDs to filter by
+	// UserGUIDFilters is an optional list of user GUIDFilters to filter by
 	UserGUIDFilters []string
 
 	// OrderBy is an optional value to sort by
@@ -148,12 +148,5 @@ func (req *CloudFoundryClient) ListRole(options ListRoleOptions) ([]models.Role,
 
 // DeleteRole deletes a role by GUID
 func (req *CloudFoundryClient) DeleteRole(roleGUID string) error {
-	resp, err := req.SendRequest("DELETE", "/v3/roles/"+roleGUID)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode() != http.StatusAccepted {
-		return fmt.Errorf("unexpected status code %d", resp.StatusCode())
-	}
-	return nil
+	return req.DeleteAndExpectStatus("/v3/roles/"+roleGUID, http.StatusAccepted)
 }

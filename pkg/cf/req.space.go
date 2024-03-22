@@ -3,6 +3,7 @@ package cf
 import (
 	"github.com/darmiel/go-cf-client/internal/util"
 	"github.com/darmiel/go-cf-client/pkg/models"
+	"strings"
 )
 
 // ListSpacesOptions are the options for listing spaces
@@ -76,6 +77,8 @@ type CreateSpaceOptions struct {
 	Annotations map[string]string
 }
 
+// CreateSpace creates a space with the specified name and organization GUID
+// You can also specify labels and annotations
 func (req *CloudFoundryClient) CreateSpace(name, orgGUID string, options CreateSpaceOptions) (*models.Space, error) {
 	body := util.KV{
 		"name": name,
@@ -90,4 +93,42 @@ func (req *CloudFoundryClient) CreateSpace(name, orgGUID string, options CreateS
 		body["annotations"] = options.Annotations
 	}
 	return PostResult[models.Space](req, "/v3/spaces", WithBody(body))
+}
+
+// ListUsersForSpaceOptions specifies the options for listing users for a space.
+type ListUsersForSpaceOptions struct {
+	PaginationOptions
+
+	// GUIDFilters is a comma-delimited list of user GUIDFilters to filter by.
+	GUIDFilters []string
+
+	// UsernameFilters is a comma-delimited list of usernames to filter by. Mutually exclusive with PartialUsernameFilters.
+	UsernameFilters []string
+
+	// PartialUsernameFilters is a comma-delimited list of strings to search by. Mutually exclusive with UsernameFilters.
+	PartialUsernameFilters []string
+
+	// OriginFilters is a comma-delimited list of user origins to filter by.
+	OriginFilters []string
+
+	// OrderBy specifies the value to sort by. Defaults to ascending; prepend with - to sort descending.
+	OrderBy string
+
+	// LabelSelector contains a list of label selector requirements.
+	LabelSelector string
+}
+
+// ListUsersForSpace lists all users with a role in the specified space.
+// This method supports filtering by user GUIDFilters, usernames (or partial usernames), origins,
+// as well as pagination and sorting options.
+func (req *CloudFoundryClient) ListUsersForSpace(spaceGUID string, options ListUsersForSpaceOptions) ([]models.User, error) {
+	queryParams := util.CreateQueryParams(util.Query{
+		"guids":             strings.Join(options.GUIDFilters, ","),
+		"usernames":         strings.Join(options.UsernameFilters, ","),
+		"partial_usernames": strings.Join(options.PartialUsernameFilters, ","),
+		"origins":           strings.Join(options.OriginFilters, ","),
+		"order_by":          options.OrderBy,
+		"label_selector":    options.LabelSelector,
+	}, options.PaginationOptions.PerPage)
+	return GetPaginated[models.User](req, "/v3/spaces/"+spaceGUID+"/users", WithQueryParams(queryParams))
 }

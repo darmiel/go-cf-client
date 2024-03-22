@@ -2,8 +2,13 @@ package util
 
 import (
 	"cmp"
+	"fmt"
+	"strconv"
 	"strings"
 )
+
+// MaxItemsPerPage is the maximum number of items that can be requested per page
+const MaxItemsPerPage = 5000
 
 // Clamp returns `this` if it is between `min` and `max`, otherwise the closest bound
 func Clamp[T cmp.Ordered](this, min, max T) T {
@@ -17,6 +22,7 @@ func Clamp[T cmp.Ordered](this, min, max T) T {
 }
 
 type KV map[string]any
+type Query map[string]string
 
 // AsMap converts a KV to a map[string]any
 // This is useful for long keys with dots, e.g. "a.b.c" which will be converted to {"a": {"b": {"c": ...}}}
@@ -53,4 +59,42 @@ func DataGUID(guid string) KV {
 
 func Data(data KV) KV {
 	return KV{"data": data}
+}
+
+func IsValueEmpty(value any) bool {
+	if value == nil {
+		return true
+	}
+	switch t := value.(type) {
+	case string:
+		return t == ""
+	case []string:
+		return t == nil || len(t) == 0
+	case map[string]string:
+		return t == nil || len(t) == 0
+	case KV:
+		return t == nil || len(t) == 0
+	case Query:
+		return t == nil || len(t) == 0
+	default:
+		panic("unknown type checked for empty: " + fmt.Sprintf("%T", t))
+	}
+}
+
+func CreateQueryParams(values Query, perPage ...int) Query {
+	queryParams := make(Query)
+	for key, value := range values {
+		if !IsValueEmpty(value) {
+			queryParams[key] = value
+		}
+	}
+	if len(perPage) > 0 {
+		perPage := perPage[0]
+		if perPage > 0 {
+			queryParams["per_page"] = strconv.Itoa(Clamp(perPage, 1, MaxItemsPerPage))
+		} else {
+			queryParams["per_page"] = strconv.Itoa(MaxItemsPerPage)
+		}
+	}
+	return queryParams
 }

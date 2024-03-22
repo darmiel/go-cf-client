@@ -6,7 +6,7 @@ import (
 )
 
 // ListOrganizationsOptions specifies criteria for fetching organizations,
-// including pagination and optional filtering by names or GUIDs.
+// including pagination and optional filtering by names or GUIDFilters.
 type ListOrganizationsOptions struct {
 	PaginationOptions
 
@@ -18,7 +18,7 @@ type ListOrganizationsOptions struct {
 }
 
 // ListOrganizations fetches a list of organizations based on the provided fetch options,
-// which include pagination and filters by names and GUIDs.
+// which include pagination and filters by names and GUIDFilters.
 func (req *CloudFoundryClient) ListOrganizations(options ListOrganizationsOptions) ([]models.Organization, error) {
 	queryParams := createParams(options.PaginationOptions)
 	if options.NameFilters != nil {
