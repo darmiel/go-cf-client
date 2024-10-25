@@ -28,18 +28,18 @@ import (
 )
 
 func main() {
-	config, err := cf.LoadConfig()
+	config, err := cf.LoadCloudFoundryConfig("config.json")
 	if err != nil {
 		panic(err)
 	}
 	fmt.Printf("%+v\n", config)
 
-	req, err := config.GetRequester()
+	client, err := config.NewClient()
 	if err != nil {
 		panic(err)
 	}
 
-	space, err := req.CreateSpace(
+	space, err := client.CreateSpace(
 		// name of the space
 		"daniel-test-123",
 		// guid of the organization

@@ -20,12 +20,24 @@ type ListSpacesOptions struct {
 	OrganizationGUIDs []string
 
 	// Labels is a list of space labels to filter by
-	Labels []string
+	LabelSelector string
 }
 
 // ListSpaces returns a list of spaces the user has access to
 func (req *CloudFoundryClient) ListSpaces(options ListSpacesOptions) ([]models.Space, error) {
 	params := createParams(options.PaginationOptions)
+	if len(options.Names) != 0 {
+		params["names"] = strings.Join(options.Names, ",")
+	}
+	if len(options.GUIDs) != 0 {
+		params["guids"] = strings.Join(options.GUIDs, ",")
+	}
+	if len(options.OrganizationGUIDs) != 0 {
+		params["organization_guids"] = strings.Join(options.OrganizationGUIDs, ",")
+	}
+	if options.LabelSelector != "" {
+		params["label_selector"] = options.LabelSelector
+	}
 	return GetPaginated[models.Space](req, "/v3/spaces", WithQueryParams(params))
 }
 
